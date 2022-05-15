@@ -1,0 +1,211 @@
+---
+title: "creative-data-visualization"
+author: "Jyhreh Johnson"
+date: "5/12/2022"
+output: html_document
+---
+```{r}
+require(tidyverse)
+require(dplyr)
+require(ggplot2)
+require(aRtsy)
+require(gganimate)
+```
+## Introduction
+For this project, I looked attempted to create fun visualization of track and field (mainly events from the track) run time results for the Women & Men's 100M dashes. I played around with the idea of making the data race each other like actual track and field athlete do. **An ultimate goal is to graph an oval track and let the times race on the track**\
+
+## Data Wrangling 
+```{r}
+f <- "https://raw.githubusercontent.com/jyhrehjohnson/creative-data-visualization/main/results.csv"
+d <- read_csv(f, col_names = TRUE)
+head(d)
+```
+
+## Data filtering 
+```{r}
+#select the data to remove location and athlete name
+d <- d %>%
+  select(Gender,
+         Event,
+         Year,
+         Medal,
+         Nationality,
+         Result
+         )
+```
+
+```{r} 
+#filter event column for only Men and Women 100M dashes
+d_100M_Men <- d %>% filter (Event == "100M Men" )
+d_100M_Men
+
+d_100M_Women <- d %>% filter(Event == "100M Women")
+d_100M_Women
+```
+
+```{r}
+Nat_Medals <- d %>% select(Event, Year, Medal, Nationality)
+w_Nat_Medals <- Nat_Medals %>% filter(Event == "100M Women")
+m_Nat_Medals <- Nat_Medals %>% filter(Event == "100M Men")
+```
+
+```{r}
+w_medal_count <- d_100M_Women %>% select(Medal, Year)
+m_medal_count <- d_100M_Men %>% select(Medal, Year)
+```
+
+## LET THE RACES BEGIN!!!!\
+
+**Medal Times Race (Plot Race)**\
+These two sets of visualizations, graph the Gold, Silver, & Bronze Medal times from the 1932 Olympics to the 2016 Olympics. 
+
+Women's 100M Medal Times from 1932-2016
+```{r}
+w_Year_Tracker <- d_100M_Women %>% #pipe the filtered data through
+  ggplot() + 
+    geom_point(aes(x = Year, y = Result, col = Medal), 
+    alpha = 0.8) + #set the parameter data for the plot
+    theme(legend.position = "right") + #create & set position of legend
+    guides(size = "none") + 
+    labs(x = "Year",y = "Run Time Results (sec)", title = "Women's 100M Medal Times (1932 - 2016)", col = "Medal Type") + #set the x and y axis labels and title
+    geom_text(aes(x = min(Year), y = min(Result), label = as.factor(Year)), hjust=0, vjust = -0.2, alpha = 0.2,  col = "gray", size = 20) + #use data to set column/row text and length of the graph
+    transition_states(as.factor(Year), state_length = 0) #separates the data by year to be projected on graph
+
+w_Year_Tracker #run the year tracker
+```
+
+Men's 100M Medal Times from 1932-2016
+```{r}
+m_Year_Tracker <- d_100M_Men %>% #pipe the filtered data through
+  ggplot() + 
+    geom_point(aes(x = Year, y = Result, col = Medal), 
+    alpha = 0.8) + #set the parameter data for the plot
+    theme(legend.position = "right") + guides(size = "none") + #create & set position of legend
+    labs(x = "Year", y = "Run Time Results (sec)", title = "Men's 100M Medal Times (1932 - 2016)", col = "Medal Type") + #set the x and y axis labels and title 
+    geom_text(aes(x = min(Year), y = min(Result), label = as.factor(Year)) , hjust=-2, vjust = -0.2, alpha = 0.2,  col = "gray", size = 20) + #use data to set column/row text and length of the graph
+    transition_states(as.factor(Year), state_length = 0) #separates the data by year to be projected on graph
+
+m_Year_Tracker #run the year tracker
+```
+
+**Nationality Times Race (Bar Race)**
+This set of bar graphs plots the result times by Nationality of each medalled athlete.\
+[*Disclaimer* - It won't be much of a race since the times are so close, but none the less it's a RACE!!]\
+```{r}
+#create a new data frame that groups the data by year
+w_race <- d_100M_Women %>%
+  group_by(Year) %>%
+  arrange(Year, desc(Medal)) %>%#arrange the data by year, setting the description to Medal type #fix the ranking to be G = 1 S = 2, B = 3 
+  arrange(Medal, desc(G)) %>%
+  mutate(ranking = row_number()) #create a ranking column to align with the medal type
+  
+head(w_race) #print the new dataset 
+```
+```{r}
+updated <- d_100M_Women$Medal %>% relocate(chr_as_locations(G, .before = B))
+```
+```{r}
+w_bar_Race <- w_race %>% #pipe the new dataset through
+  ggplot() +
+  geom_col(aes(ranking, Year, fill = Nationality)) +
+  geom_text(aes(ranking, Year, label = Result), hjust = -0.1) +
+  geom_text(aes(ranking, y = 0 , label = Nationality), hjust = 1.1) +
+  geom_text(aes(x = 15, y = max(Year) , label = as.factor(Year)), vjust = 0.2, alpha = 0.5,  col = "gray", size = 20) +
+  coord_flip(clip = "off", expand = FALSE) + scale_x_reverse() +
+  theme_minimal() + theme(
+    panel.grid = element_blank(), 
+    legend.position = "none",
+    axis.ticks.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = margin(1, 4, 1, 3, "cm")
+  ) +
+  transition_states(Year, state_length = 0, transition_length = 2) +
+  enter_fade() + #fade the bar in 
+  exit_fade() + #fade the bar out
+  ease_aes('quadratic-in-out') #transition of the 2 componenets in and out 
+
+wb_race <- animate(w_bar_Race, fps = 25, duration = 15, rewind = FALSE) #run the animation
+wb_race
+```
+
+```{r}
+m_race <- d_100M_Men %>% #pipe the filtered data through
+  group_by(Year) %>% #group the data by year
+  arrange(Year, desc(Medal)) %>% #prints in alphabetical order need to break it to set G,S,B sequence
+  mutate(ranking = row_number()) #create a ranking column to align with the medal type
+  
+head(m_race) #print the new dataset 
+```
+
+```{r}
+w_bar_Race <- w_race %>% #pipe the new dataset through
+  ggplot() +
+  geom_col(aes(ranking, Year, fill = Nationality)) +
+  geom_text(aes(ranking, Year, label = Result), hjust = -0.1) +
+  geom_text(aes(ranking, y = 0 , label = Nationality), hjust = 1.1) +
+  geom_text(aes(x = 15, y = max(Year) , label = as.factor(Year)), vjust = 0.2, alpha = 0.5,  col = "gray", size = 20) +
+  coord_flip(clip = "off", expand = FALSE) + scale_x_reverse() +
+  theme_minimal() + theme(
+    panel.grid = element_blank(), 
+    legend.position = "none",
+    axis.ticks.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = margin(1, 4, 1, 3, "cm")
+  ) +
+  transition_states(Year, state_length = 0, transition_length = 2) +
+  enter_fade() + #fade the bar in 
+  exit_fade() + #fade the bar out
+  ease_aes('quadratic-in-out') #transition of the 2 componenets in and out 
+
+mb_race <- animate(w_bar_Race, fps = 25, duration = 15, rewind = FALSE) #run the animation
+mb_race
+```
+
+```{r}
+n_race <- w_Nat_Medals %>% #pipe the filtered data through
+  group_by(Medal) %>% #group the data by year
+  arrange(Medal, desc(Year)) #prints in alphabetical order need to break it to set G,S,B sequence
+  mutate(ranking = w_Nat_Medals$Medal("G")) #create a ranking column to align with the medal type
+  
+head(n_race) #print the new dataset 
+```
+
+```{r}
+nat_bar_Race <- n_race %>% #pipe the new dataset through
+  ggplot() +
+  geom_col(aes(ranking, Medal, fill = Medal)) +
+  geom_text(aes(ranking, Medal, label = Medal), hjust = -0.1) +
+  geom_text(aes(ranking, y = 0 , label = Medal), hjust = 1.1) +
+  geom_text(aes(x = 15, y = max(Medal) , label = as.factor(Year)), vjust = 0.2, alpha = 0.5,  col = "gray", size = 20) +
+  coord_flip(clip = "off", expand = FALSE) + scale_x_reverse() +
+  theme_minimal() + theme(
+    panel.grid = element_blank(), 
+    legend.position = "none",
+    axis.ticks.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = margin(1, 4, 1, 3, "cm")
+  ) +
+  transition_states(Year, state_length = 0, transition_length = 2) +
+  enter_fade() + #fade the bar in 
+  exit_fade() + #fade the bar out
+  ease_aes('quadratic-in-out') #transition of the 2 componenets in and out 
+
+nb_race <- animate(nat_bar_Race, fps = 25, duration = 15, rewind = FALSE) #run the animation
+nb_race
+```
+**Track Graphs**\
+This is my attempt to create an oval track(graph) for the data racers to run on.\
+Women's 100M Dash
+```{r}
+
+
+```
+
+Men's 100M Dash
+```{r}
+
+
+```
