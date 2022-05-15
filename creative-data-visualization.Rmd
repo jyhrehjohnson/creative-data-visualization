@@ -8,8 +8,8 @@ output: html_document
 require(tidyverse)
 require(dplyr)
 require(ggplot2)
-require(aRtsy)
 require(gganimate)
+require(gapminder)
 ```
 ## Introduction
 For this project, I looked attempted to create fun visualization of track and field (mainly events from the track) run time results for the Women & Men's 100M dashes. I played around with the idea of making the data race each other like actual track and field athlete do. **An ultimate goal is to graph an oval track and let the times race on the track**\
@@ -42,16 +42,12 @@ d_100M_Men
 d_100M_Women <- d %>% filter(Event == "100M Women")
 d_100M_Women
 ```
-
+Medal Count Prep
 ```{r}
+#create data set with nationality, year, medal, and event
 Nat_Medals <- d %>% select(Event, Year, Medal, Nationality)
 w_Nat_Medals <- Nat_Medals %>% filter(Event == "100M Women")
 m_Nat_Medals <- Nat_Medals %>% filter(Event == "100M Men")
-```
-
-```{r}
-w_medal_count <- d_100M_Women %>% select(Medal, Year)
-m_medal_count <- d_100M_Men %>% select(Medal, Year)
 ```
 
 ## LET THE RACES BEGIN!!!!\
@@ -72,6 +68,7 @@ w_Year_Tracker <- d_100M_Women %>% #pipe the filtered data through
     transition_states(as.factor(Year), state_length = 0) #separates the data by year to be projected on graph
 
 w_Year_Tracker #run the year tracker
+anim_save("w_Year_Tracker.gif") #save the animation as a gif
 ```
 
 Men's 100M Medal Times from 1932-2016
@@ -86,24 +83,25 @@ m_Year_Tracker <- d_100M_Men %>% #pipe the filtered data through
     transition_states(as.factor(Year), state_length = 0) #separates the data by year to be projected on graph
 
 m_Year_Tracker #run the year tracker
+anim_save("m_Year_Tracker.gif") #save the animation as a gif
 ```
 
 **Nationality Times Race (Bar Race)**
-This set of bar graphs plots the result times by Nationality of each medalled athlete.\
+This set of bar graphs plots the result times by Nationality of each medalled athlete.This section took me a while to figure out how to order the Medals (G, S, B) and correspond them to (1,2,3). But I GOT IT!!!\
 [*Disclaimer* - It won't be much of a race since the times are so close, but none the less it's a RACE!!]\
+
+Women's
 ```{r}
 #create a new data frame that groups the data by year
 w_race <- d_100M_Women %>%
   group_by(Year) %>%
-  arrange(Year, desc(Medal)) %>%#arrange the data by year, setting the description to Medal type #fix the ranking to be G = 1 S = 2, B = 3 
-  arrange(Medal, desc(G)) %>%
-  mutate(ranking = row_number()) #create a ranking column to align with the medal type
+  arrange(factor(Medal, levels = c('G', 'S', 'B')))%>% #arrange the Medal column for the order G,S,B
+  arrange(Year)%>% #arrange the data by year
+  mutate(ranking = row_number()) #create a ranking column to align with the medal type (G = 1, S = 2, B = 3)
   
-head(w_race) #print the new dataset 
+head(w_race) #print/check the new data set  
 ```
-```{r}
-updated <- d_100M_Women$Medal %>% relocate(chr_as_locations(G, .before = B))
-```
+
 ```{r}
 w_bar_Race <- w_race %>% #pipe the new dataset through
   ggplot() +
@@ -123,23 +121,27 @@ w_bar_Race <- w_race %>% #pipe the new dataset through
   transition_states(Year, state_length = 0, transition_length = 2) +
   enter_fade() + #fade the bar in 
   exit_fade() + #fade the bar out
-  ease_aes('quadratic-in-out') #transition of the 2 componenets in and out 
+  ease_aes('quadratic-in-out') #transition of the 2 components in and out 
 
 wb_race <- animate(w_bar_Race, fps = 25, duration = 15, rewind = FALSE) #run the animation
 wb_race
+anim_save("wb_race.gif") #save the animation as a gif
 ```
 
+Men's
 ```{r}
-m_race <- d_100M_Men %>% #pipe the filtered data through
-  group_by(Year) %>% #group the data by year
-  arrange(Year, desc(Medal)) %>% #prints in alphabetical order need to break it to set G,S,B sequence
-  mutate(ranking = row_number()) #create a ranking column to align with the medal type
+#create a new data frame that groups the data by year
+m_race <- d_100M_Men %>%
+  group_by(Year) %>%
+  arrange(factor(Medal, levels = c('G', 'S', 'B')))%>% #arrange the Medal column for the order G,S,B
+  arrange(Year)%>% #arrange the data by year
+  mutate(ranking = row_number()) #create a ranking column to align with the medal type (G = 1, S = 2, B = 3)
   
-head(m_race) #print the new dataset 
+head(m_race) #print/check the new data set 
 ```
 
 ```{r}
-w_bar_Race <- w_race %>% #pipe the new dataset through
+m_bar_Race <- m_race %>% #pipe the new dataset through
   ggplot() +
   geom_col(aes(ranking, Year, fill = Nationality)) +
   geom_text(aes(ranking, Year, label = Result), hjust = -0.1) +
@@ -157,55 +159,16 @@ w_bar_Race <- w_race %>% #pipe the new dataset through
   transition_states(Year, state_length = 0, transition_length = 2) +
   enter_fade() + #fade the bar in 
   exit_fade() + #fade the bar out
-  ease_aes('quadratic-in-out') #transition of the 2 componenets in and out 
+  ease_aes('quadratic-in-out') #transition of the 2 components in and out 
 
-mb_race <- animate(w_bar_Race, fps = 25, duration = 15, rewind = FALSE) #run the animation
+mb_race <- animate(m_bar_Race, fps = 25, duration = 15, rewind = FALSE) #run the animation
 mb_race
+anim_save("mb_race.gif") #save the animation as a gif
 ```
 
 ```{r}
-n_race <- w_Nat_Medals %>% #pipe the filtered data through
-  group_by(Medal) %>% #group the data by year
-  arrange(Medal, desc(Year)) #prints in alphabetical order need to break it to set G,S,B sequence
-  mutate(ranking = w_Nat_Medals$Medal("G")) #create a ranking column to align with the medal type
-  
-head(n_race) #print the new dataset 
-```
-
-```{r}
-nat_bar_Race <- n_race %>% #pipe the new dataset through
-  ggplot() +
-  geom_col(aes(ranking, Medal, fill = Medal)) +
-  geom_text(aes(ranking, Medal, label = Medal), hjust = -0.1) +
-  geom_text(aes(ranking, y = 0 , label = Medal), hjust = 1.1) +
-  geom_text(aes(x = 15, y = max(Medal) , label = as.factor(Year)), vjust = 0.2, alpha = 0.5,  col = "gray", size = 20) +
-  coord_flip(clip = "off", expand = FALSE) + scale_x_reverse() +
-  theme_minimal() + theme(
-    panel.grid = element_blank(), 
-    legend.position = "none",
-    axis.ticks.y = element_blank(),
-    axis.title.y = element_blank(),
-    axis.text.y = element_blank(),
-    plot.margin = margin(1, 4, 1, 3, "cm")
-  ) +
-  transition_states(Year, state_length = 0, transition_length = 2) +
-  enter_fade() + #fade the bar in 
-  exit_fade() + #fade the bar out
-  ease_aes('quadratic-in-out') #transition of the 2 componenets in and out 
-
-nb_race <- animate(nat_bar_Race, fps = 25, duration = 15, rewind = FALSE) #run the animation
-nb_race
-```
-**Track Graphs**\
-This is my attempt to create an oval track(graph) for the data racers to run on.\
-Women's 100M Dash
-```{r}
-
-
-```
-
-Men's 100M Dash
-```{r}
-
-
+w_medal_count <- d %>%
+  group_by(Year,) %>%
+  arrange(factor(Medal, levels = c('G', 'S', 'B')))%>% #arrange the Medal column for the order G,S,B
+  arrange(Year, Nationality) #arrange the data by year
 ```
