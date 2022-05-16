@@ -9,7 +9,6 @@ require(tidyverse)
 require(dplyr)
 require(ggplot2)
 require(gganimate)
-require(gapminder)
 ```
 ## Introduction
 For this project, I looked attempted to create fun visualization of track and field (mainly events from the track) run time results for the Women & Men's 100M dashes. I played around with the idea of making the data race each other like actual track and field athlete do. **An ultimate goal is to graph an oval track and let the times race on the track**\
@@ -36,18 +35,11 @@ d <- d %>%
 
 ```{r} 
 #filter event column for only Men and Women 100M dashes
-d_100M_Men <- d %>% filter (Event == "100M Men" )
+d_100M_Men <- d %>% filter (Event == "100M Men")
 d_100M_Men
 
 d_100M_Women <- d %>% filter(Event == "100M Women")
 d_100M_Women
-```
-Medal Count Prep
-```{r}
-#create data set with nationality, year, medal, and event
-Nat_Medals <- d %>% select(Event, Year, Medal, Nationality)
-w_Nat_Medals <- Nat_Medals %>% filter(Event == "100M Women")
-m_Nat_Medals <- Nat_Medals %>% filter(Event == "100M Men")
 ```
 
 ## LET THE RACES BEGIN!!!!\
@@ -71,14 +63,14 @@ w_Year_Tracker #run the year tracker
 anim_save("w_Year_Tracker.gif") #save the animation as a gif
 ```
 
-Men's 100M Medal Times from 1932-2016
+Men's 100M Medal Times from 1896-2016
 ```{r}
 m_Year_Tracker <- d_100M_Men %>% #pipe the filtered data through
   ggplot() + 
     geom_point(aes(x = Year, y = Result, col = Medal), 
     alpha = 0.8) + #set the parameter data for the plot
     theme(legend.position = "right") + guides(size = "none") + #create & set position of legend
-    labs(x = "Year", y = "Run Time Results (sec)", title = "Men's 100M Medal Times (1932 - 2016)", col = "Medal Type") + #set the x and y axis labels and title 
+    labs(x = "Year", y = "Run Time Results (sec)", title = "Men's 100M Medal Times (1896 - 2016)", col = "Medal Type") + #set the x and y axis labels and title 
     geom_text(aes(x = min(Year), y = min(Result), label = as.factor(Year)) , hjust=-2, vjust = -0.2, alpha = 0.2,  col = "gray", size = 20) + #use data to set column/row text and length of the graph
     transition_states(as.factor(Year), state_length = 0) #separates the data by year to be projected on graph
 
@@ -90,7 +82,7 @@ anim_save("m_Year_Tracker.gif") #save the animation as a gif
 This set of bar graphs plots the result times by Nationality of each medalled athlete.This section took me a while to figure out how to order the Medals (G, S, B) and correspond them to (1,2,3). But I GOT IT!!!\
 [*Disclaimer* - It won't be much of a race since the times are so close, but none the less it's a RACE!!]\
 
-Women's
+Women's Race
 ```{r}
 #create a new data frame that groups the data by year
 w_race <- d_100M_Women %>%
@@ -128,7 +120,7 @@ wb_race
 anim_save("wb_race.gif") #save the animation as a gif
 ```
 
-Men's
+Men's Race
 ```{r}
 #create a new data frame that groups the data by year
 m_race <- d_100M_Men %>%
@@ -166,9 +158,3 @@ mb_race
 anim_save("mb_race.gif") #save the animation as a gif
 ```
 
-```{r}
-w_medal_count <- d %>%
-  group_by(Year,) %>%
-  arrange(factor(Medal, levels = c('G', 'S', 'B')))%>% #arrange the Medal column for the order G,S,B
-  arrange(Year, Nationality) #arrange the data by year
-```
